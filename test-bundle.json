@@ -1,0 +1,96 @@
+{
+  "metadata": {
+    "source": "test-data",
+    "sourceFile": "test-data.csv",
+    "format": "csv",
+    "ingestedAt": "2025-11-26T09:27:48.127Z",
+    "recordCount": 4,
+    "processingSteps": [
+      "ingestion"
+    ],
+    "schema": {
+      "name": "string",
+      "age": "number",
+      "city": "string",
+      "active": "boolean"
+    }
+  },
+  "records": [
+    {
+      "name": "John",
+      "age": "30",
+      "city": "NYC",
+      "active": "true"
+    },
+    {
+      "name": "Jane",
+      "age": "25",
+      "city": "LA",
+      "active": "true"
+    },
+    {
+      "name": "Bob",
+      "age": "35",
+      "city": "Chicago",
+      "active": "false"
+    },
+    {
+      "name": "Alice",
+      "age": "28",
+      "city": "Seattle",
+      "active": "true"
+    }
+  ],
+  "stats": {
+    "fieldStats": {
+      "name": {
+        "type": "string",
+        "nullCount": 0,
+        "uniqueCount": 4
+      },
+      "age": {
+        "type": "string",
+        "nullCount": 0,
+        "uniqueCount": 4
+      },
+      "city": {
+        "type": "string",
+        "nullCount": 0,
+        "uniqueCount": 4
+      },
+      "active": {
+        "type": "string",
+        "nullCount": 0,
+        "uniqueCount": 2
+      }
+    }
+  },
+  "samples": {
+    "main": [
+      {
+        "name": "John",
+        "age": "30",
+        "city": "NYC",
+        "active": "true"
+      },
+      {
+        "name": "Jane",
+        "age": "25",
+        "city": "LA",
+        "active": "true"
+      },
+      {
+        "name": "Bob",
+        "age": "35",
+        "city": "Chicago",
+        "active": "false"
+      },
+      {
+        "name": "Alice",
+        "age": "28",
+        "city": "Seattle",
+        "active": "true"
+      }
+    ]
+  }
+}

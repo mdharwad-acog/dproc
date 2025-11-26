@@ -1,0 +1,227 @@
+2025-11-26T12:04:30.958Z dproc:core:connector:registry Registering built-in connectors
+2025-11-26T12:04:30.961Z dproc:core:connector:registry Registered csv-connector for extension .csv
+2025-11-26T12:04:30.961Z dproc:core:connector:registry Registered csv-connector for extension .tsv
+2025-11-26T12:04:30.961Z dproc:core:connector:registry Registered json-connector for extension .json
+2025-11-26T12:04:30.962Z dproc:core:connector:registry Registered xml-connector for extension .xml
+2025-11-26T12:04:30.962Z dproc:core:connector:registry Registered parquet-connector for extension .parquet
+
+=== Testing Search Layer ===
+
+1. Initializing config...
+2025-11-26T12:04:31.111Z dproc:core:config Initializing configuration
+2025-11-26T12:04:31.111Z dproc:core:config:info Config initialized: provider=gemini, model=gemini-2.5-flash
+✓ Config initialized
+
+2. Creating test bundle...
+2025-11-26T12:04:31.112Z dproc:core:connector:registry Found csv-connector for file test-data.csv
+2025-11-26T12:04:31.112Z dproc:core:connector:csvconnector Reading CSV file: test-data.csv
+2025-11-26T12:04:31.112Z dproc:core:connector:csvconnector Streaming CSV file: test-data.csv
+2025-11-26T12:04:31.124Z dproc:core:connector:csvconnector Processing final chunk of 4 records
+2025-11-26T12:04:31.125Z dproc:core:connector:csvconnector:info Streamed total of 4 records
+2025-11-26T12:04:31.126Z dproc:core:connector:csvconnector:info Read 4 records from test-data.csv
+2025-11-26T12:04:31.126Z dproc:core:bundle:builder Creating bundle from 4 records
+2025-11-26T12:04:31.126Z dproc:core:bundle:builder Computing statistics
+2025-11-26T12:04:31.126Z dproc:core:bundle:builder Creating samples
+2025-11-26T12:04:31.127Z dproc:core:bundle:builder:info Bundle created: 4 records, 4 fields
+✓ Bundle created: 4 records
+
+
+🔍 Query: "Find all people from NYC"
+   Searching... (this may take a few seconds)
+2025-11-26T12:04:31.128Z dproc:core:search:engine:info Starting search: "Find all people from NYC"
+2025-11-26T12:04:31.128Z dproc:core:search:engine Step 1: Creating search plan with LLM...
+2025-11-26T12:04:31.128Z dproc:core:search:planner Planning search for query: Find all people from NYC
+2025-11-26T12:04:31.128Z dproc:core:llm:provider Creating LLM client for provider: gemini
+2025-11-26T12:04:31.129Z dproc:core:llm:aisdkadapter Initialized with provider=gemini, model=gemini-2.5-flash
+2025-11-26T12:04:31.129Z dproc:core:llm:provider:info LLM client created: gemini
+2025-11-26T12:04:31.129Z dproc:core:search:planner Calling LLM to create search plan...
+2025-11-26T12:04:31.129Z dproc:core:llm:aisdkadapter Generating text with gemini
+2025-11-26T12:04:33.622Z dproc:core:llm:aisdkadapter:info Generated 609 tokens (input: 433, output: 35)
+2025-11-26T12:04:33.625Z dproc:core:search:planner LLM response: ```json
+{"filters":[{"field":"city","operator":"=","value":"NYC"}],"sortBy":null,"sortOrder":null,"limit":10}
+```
+2025-11-26T12:04:33.626Z dproc:core:search:planner:info Search plan created: 1 filters, limit=10
+2025-11-26T12:04:33.626Z dproc:core:search:planner Filters: [ { field: 'city', operator: '=', value: 'NYC' } ]
+2025-11-26T12:04:33.626Z dproc:core:search:engine Step 2: Executing search plan...
+2025-11-26T12:04:33.629Z dproc:core:search:executor Executing search plan: 1 filters
+2025-11-26T12:04:33.630Z dproc:core:search:executor After filter city = NYC: 4 → 1 records
+2025-11-26T12:04:33.630Z dproc:core:search:executor:info Query executed: 4 → 1 records (filtered 3)
+2025-11-26T12:04:33.630Z dproc:core:search:engine Step 3: Consolidating results with LLM...
+2025-11-26T12:04:33.631Z dproc:core:search:consolidator Consolidating 1 results for query: Find all people from NYC
+2025-11-26T12:04:33.631Z dproc:core:llm:aisdkadapter Generating JSON response
+2025-11-26T12:04:33.631Z dproc:core:llm:aisdkadapter Generating text with gemini
+2025-11-26T12:04:36.754Z dproc:core:llm:aisdkadapter:info Generated 594 tokens (input: 198, output: 158)
+2025-11-26T12:04:36.754Z dproc:core:llm:aisdkadapter Raw LLM response: {
+  "answer": "One person was found from NYC: John. This record indicates an active individual aged ...
+2025-11-26T12:04:36.754Z dproc:core:llm:aisdkadapter JSON to parse: {
+  "answer": "One person was found from NYC: John. This record indicates an active individual aged ...
+2025-11-26T12:04:36.754Z dproc:core:llm:aisdkadapter Successfully parsed JSON response
+2025-11-26T12:04:36.755Z dproc:core:search:consolidator:info Results consolidated successfully
+2025-11-26T12:04:36.755Z dproc:core:search:consolidator Answer length: 88 chars
+2025-11-26T12:04:36.755Z dproc:core:search:consolidator Insights count: 3
+2025-11-26T12:04:36.755Z dproc:core:search:engine:info Search complete: 1 matches in 5627ms
+
+   Answer: One person was found from NYC: John. This record indicates an active individual aged 30.
+   Matches: 1
+   Insights:
+     - Only a single individual was identified from NYC, suggesting either a small dataset or a very specific filter.
+     - The person found, John, is 30 years old and marked as 'active'.
+     - The limited results provide a narrow view, and further analysis would require more data points from NYC.
+   Stats: {
+  "total_people_from_nyc": 1,
+  "percentage_active_from_nyc": 100,
+  "average_age_from_nyc": 30
+}
+   Matching records:
+     1. John - NYC (age: 30)
+   Execution time: 5627 ms
+
+🔍 Query: "Who is older than 28?"
+   Searching... (this may take a few seconds)
+2025-11-26T12:04:36.759Z dproc:core:search:engine:info Starting search: "Who is older than 28?"
+2025-11-26T12:04:36.759Z dproc:core:search:engine Step 1: Creating search plan with LLM...
+2025-11-26T12:04:36.759Z dproc:core:search:planner Planning search for query: Who is older than 28?
+2025-11-26T12:04:36.759Z dproc:core:search:planner Calling LLM to create search plan...
+2025-11-26T12:04:36.759Z dproc:core:llm:aisdkadapter Generating text with gemini
+2025-11-26T12:04:38.719Z dproc:core:llm:aisdkadapter:info Generated 617 tokens (input: 435, output: 38)
+2025-11-26T12:04:38.722Z dproc:core:search:planner LLM response: ```json
+{"filters":[{"field":"age","operator":">","value":28}],"sortBy":"field_name","sortOrder":"asc","limit":10}
+```
+2025-11-26T12:04:38.722Z dproc:core:search:planner:info Search plan created: 1 filters, limit=10
+2025-11-26T12:04:38.723Z dproc:core:search:planner Filters: [ { field: 'age', operator: '>', value: 28 } ]
+2025-11-26T12:04:38.723Z dproc:core:search:engine Step 2: Executing search plan...
+2025-11-26T12:04:38.723Z dproc:core:search:executor Executing search plan: 1 filters
+2025-11-26T12:04:38.724Z dproc:core:search:executor After filter age > 28: 4 → 2 records
+2025-11-26T12:04:38.727Z dproc:core:search:executor Sorted by field_name asc
+2025-11-26T12:04:38.727Z dproc:core:search:executor:info Query executed: 4 → 2 records (filtered 2)
+2025-11-26T12:04:38.727Z dproc:core:search:engine Step 3: Consolidating results with LLM...
+2025-11-26T12:04:38.727Z dproc:core:search:consolidator Consolidating 2 results for query: Who is older than 28?
+2025-11-26T12:04:38.727Z dproc:core:llm:aisdkadapter Generating JSON response
+2025-11-26T12:04:38.727Z dproc:core:llm:aisdkadapter Generating text with gemini
+2025-11-26T12:04:42.291Z dproc:core:llm:aisdkadapter:info Generated 776 tokens (input: 239, output: 142)
+2025-11-26T12:04:42.292Z dproc:core:llm:aisdkadapter Raw LLM response: {
+  "answer": "John (30) and Bob (35) are the two individuals found who are older than 28.",
+  "insi...
+2025-11-26T12:04:42.292Z dproc:core:llm:aisdkadapter JSON to parse: {
+  "answer": "John (30) and Bob (35) are the two individuals found who are older than 28.",
+  "insi...
+2025-11-26T12:04:42.292Z dproc:core:llm:aisdkadapter Successfully parsed JSON response
+2025-11-26T12:04:42.293Z dproc:core:search:consolidator:info Results consolidated successfully
+2025-11-26T12:04:42.296Z dproc:core:search:consolidator Answer length: 75 chars
+2025-11-26T12:04:42.296Z dproc:core:search:consolidator Insights count: 3
+2025-11-26T12:04:42.296Z dproc:core:search:engine:info Search complete: 2 matches in 5537ms
+
+   Answer: John (30) and Bob (35) are the two individuals found who are older than 28.
+   Matches: 2
+   Insights:
+     - All individuals identified in the sample are older than 28.
+     - The individuals found reside in different cities (NYC and Chicago).
+     - One of the identified individuals is active, while the other is not.
+   Stats: {
+  "total_records_found": 2,
+  "average_age_of_found_individuals": 32.5,
+  "active_individuals_count": 1
+}
+   Matching records:
+     1. John - NYC (age: 30)
+     2. Bob - Chicago (age: 35)
+   Execution time: 5537 ms
+
+🔍 Query: "Show me active users"
+   Searching... (this may take a few seconds)
+2025-11-26T12:04:42.300Z dproc:core:search:engine:info Starting search: "Show me active users"
+2025-11-26T12:04:42.300Z dproc:core:search:engine Step 1: Creating search plan with LLM...
+2025-11-26T12:04:42.300Z dproc:core:search:planner Planning search for query: Show me active users
+2025-11-26T12:04:42.301Z dproc:core:search:planner Calling LLM to create search plan...
+2025-11-26T12:04:42.302Z dproc:core:llm:aisdkadapter Generating text with gemini
+2025-11-26T12:04:44.824Z dproc:core:llm:aisdkadapter:info Generated 690 tokens (input: 432, output: 26)
+2025-11-26T12:04:44.824Z dproc:core:search:planner LLM response: ```json
+{"filters":[{"field":"active","operator":"=","value":"true"}],"limit":10}
+```
+2025-11-26T12:04:44.824Z dproc:core:search:planner:info Search plan created: 1 filters, limit=10
+2025-11-26T12:04:44.825Z dproc:core:search:planner Filters: [ { field: 'active', operator: '=', value: 'true' } ]
+2025-11-26T12:04:44.825Z dproc:core:search:engine Step 2: Executing search plan...
+2025-11-26T12:04:44.825Z dproc:core:search:executor Executing search plan: 1 filters
+2025-11-26T12:04:44.826Z dproc:core:search:executor After filter active = true: 4 → 3 records
+2025-11-26T12:04:44.826Z dproc:core:search:executor:info Query executed: 4 → 3 records (filtered 1)
+2025-11-26T12:04:44.827Z dproc:core:search:engine Step 3: Consolidating results with LLM...
+2025-11-26T12:04:44.827Z dproc:core:search:consolidator Consolidating 3 results for query: Show me active users
+2025-11-26T12:04:44.827Z dproc:core:llm:aisdkadapter Generating JSON response
+2025-11-26T12:04:44.827Z dproc:core:llm:aisdkadapter Generating text with gemini
+2025-11-26T12:04:49.039Z dproc:core:llm:aisdkadapter:info Generated 919 tokens (input: 275, output: 158)
+2025-11-26T12:04:49.039Z dproc:core:llm:aisdkadapter Raw LLM response: {
+  "answer": "Here are the 3 active users found. The sample includes John, Jane, and Alice, all con...
+2025-11-26T12:04:49.039Z dproc:core:llm:aisdkadapter JSON to parse: {
+  "answer": "Here are the 3 active users found. The sample includes John, Jane, and Alice, all con...
+2025-11-26T12:04:49.039Z dproc:core:llm:aisdkadapter Successfully parsed JSON response
+2025-11-26T12:04:49.039Z dproc:core:search:consolidator:info Results consolidated successfully
+2025-11-26T12:04:49.040Z dproc:core:search:consolidator Answer length: 105 chars
+2025-11-26T12:04:49.040Z dproc:core:search:consolidator Insights count: 3
+2025-11-26T12:04:49.040Z dproc:core:search:engine:info Search complete: 3 matches in 6740ms
+
+   Answer: Here are the 3 active users found. The sample includes John, Jane, and Alice, all confirmed to be active.
+   Matches: 3
+   Insights:
+     - All users in the provided sample are confirmed to be active.
+     - The active users in the sample represent diverse locations including NYC, LA, and Seattle.
+     - The data provides user details such as name, age, city, and active status.
+   Stats: {
+  "total_active_users_found": 3,
+  "average_age_of_active_users_in_sample": 27.67,
+  "unique_cities_in_sample": 3
+}
+   Matching records:
+     1. John - NYC (age: 30)
+     2. Jane - LA (age: 25)
+     3. Alice - Seattle (age: 28)
+   Execution time: 6740 ms
+
+🔍 Query: "Find Jane"
+   Searching... (this may take a few seconds)
+2025-11-26T12:04:49.041Z dproc:core:search:engine:info Starting search: "Find Jane"
+2025-11-26T12:04:49.041Z dproc:core:search:engine Step 1: Creating search plan with LLM...
+2025-11-26T12:04:49.041Z dproc:core:search:planner Planning search for query: Find Jane
+2025-11-26T12:04:49.041Z dproc:core:search:planner Calling LLM to create search plan...
+2025-11-26T12:04:49.041Z dproc:core:llm:aisdkadapter Generating text with gemini
+2025-11-26T12:04:51.065Z dproc:core:llm:aisdkadapter:info Generated 620 tokens (input: 430, output: 35)
+2025-11-26T12:04:51.065Z dproc:core:search:planner LLM response: ```json
+{"filters":[{"field":"name","operator":"contains","value":"Jane"}],"sortBy":null,"sortOrder":null,"limit":10}
+```
+2025-11-26T12:04:51.065Z dproc:core:search:planner:info Search plan created: 1 filters, limit=10
+2025-11-26T12:04:51.066Z dproc:core:search:planner Filters: [ { field: 'name', operator: 'contains', value: 'Jane' } ]
+2025-11-26T12:04:51.066Z dproc:core:search:engine Step 2: Executing search plan...
+2025-11-26T12:04:51.067Z dproc:core:search:executor Executing search plan: 1 filters
+2025-11-26T12:04:51.067Z dproc:core:search:executor After filter name contains Jane: 4 → 1 records
+2025-11-26T12:04:51.067Z dproc:core:search:executor:info Query executed: 4 → 1 records (filtered 3)
+2025-11-26T12:04:51.067Z dproc:core:search:engine Step 3: Consolidating results with LLM...
+2025-11-26T12:04:51.067Z dproc:core:search:consolidator Consolidating 1 results for query: Find Jane
+2025-11-26T12:04:51.068Z dproc:core:llm:aisdkadapter Generating JSON response
+2025-11-26T12:04:51.068Z dproc:core:llm:aisdkadapter Generating text with gemini
+2025-11-26T12:04:56.209Z dproc:core:llm:aisdkadapter:info Generated 1036 tokens (input: 195, output: 137)
+2025-11-26T12:04:56.209Z dproc:core:llm:aisdkadapter Raw LLM response: {
+  "answer": "I found one record for Jane. She is 25 years old, lives in LA, and is currently activ...
+2025-11-26T12:04:56.209Z dproc:core:llm:aisdkadapter JSON to parse: {
+  "answer": "I found one record for Jane. She is 25 years old, lives in LA, and is currently activ...
+2025-11-26T12:04:56.210Z dproc:core:llm:aisdkadapter Successfully parsed JSON response
+2025-11-26T12:04:56.210Z dproc:core:search:consolidator:info Results consolidated successfully
+2025-11-26T12:04:56.210Z dproc:core:search:consolidator Answer length: 87 chars
+2025-11-26T12:04:56.210Z dproc:core:search:consolidator Insights count: 3
+2025-11-26T12:04:56.210Z dproc:core:search:engine:info Search complete: 1 matches in 7169ms
+
+   Answer: I found one record for Jane. She is 25 years old, lives in LA, and is currently active.
+   Matches: 1
+   Insights:
+     - The search query 'Find Jane' resulted in an exact match for the name.
+     - The record provides demographic information including age and city of residence.
+     - Jane's current status is indicated as 'active' within her record.
+   Stats: {
+  "records_found": 1,
+  "age_of_jane": 25,
+  "active_records_count": 1
+}
+   Matching records:
+     1. Jane - LA (age: 25)
+   Execution time: 7169 ms
+
+=== Search Layer Tests Complete ===
+

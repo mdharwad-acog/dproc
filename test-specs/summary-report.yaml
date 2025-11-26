@@ -1,0 +1,57 @@
+# test-specs/summary-report.yaml
+id: summary-report
+name: Data Summary Report
+description: Generates a summary report with LLM insights
+templateFile: summary-report.njk
+
+variables:
+  - name: source
+    type: string
+    source: bundle
+    
+  - name: recordCount
+    type: number
+    source: bundle
+    
+  - name: ingestedAt
+    type: string
+    source: bundle
+    
+  - name: fields
+    type: array
+    source: bundle
+    
+  - name: samples
+    type: json
+    source: bundle
+    
+  - name: datasetName
+    type: string
+    source: computed
+    defaultValue: "Customer Dataset"
+    
+  - name: generatedAt
+    type: string
+    source: computed
+    
+  - name: summary_md
+    type: markdown
+    source: llm
+    promptFile: dataset-summary.prompt.md
+    inputs:
+      - recordCount
+      - fields
+      - samples
+      
+  - name: key_insights
+    type: markdown
+    source: llm
+    promptFile: key-insights.prompt.md
+    inputs:
+      - recordCount
+      - fields
+      - samples
+
+options:
+  temperature: 0.7
+  maxTokens: 1000
