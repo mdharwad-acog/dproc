@@ -1,5 +1,5 @@
 {
-  "name": "@agnitha/dproc",
+  "name": "@aganitha/dproc",
   "version": "1.0.0",
   "description": "AI-powered data processing engine with multi-format connectors, LLM integration, natural language search, and intelligent reporting",
   "type": "module",
@@ -46,7 +46,7 @@
   "author": "acog-mdharwad",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "git+https://github.com/mdharwad-acog/dproc.git"
   },
   "publishConfig": {
     "registry": "https://npm.aganitha.ai/"
