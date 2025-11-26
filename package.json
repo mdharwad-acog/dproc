@@ -1,6 +1,6 @@
 {
   "name": "@aganitha/dproc",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "AI-powered data processing engine with multi-format connectors, LLM integration, natural language search, and intelligent reporting",
   "type": "module",
   "main": "./dist/index.js",
