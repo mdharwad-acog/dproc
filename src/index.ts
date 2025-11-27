@@ -1,6 +1,6 @@
 // Configuration
 export { ConfigManager } from './config/index.js';
-export type { DataProcessorConfig, LlmConfig } from './config/index.js';
+export type { LlmConfig } from './config/index.js';
 
 // Connectors
 export {

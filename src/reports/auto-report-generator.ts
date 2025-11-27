@@ -1,7 +1,10 @@
 // src/reports/auto-report-generator.ts
+import { createLogger } from '../utils/logger.js';
 import { ProviderResolver } from '../llm/provider-resolver.js';
 import type { UniversalBundle } from '../bundles/types.js';
 import type { GeneratedReport, ReportGenerateOptions, TemplateData } from './types.js';
+
+const log = createLogger('core:reports:auto-generator');
 
 export class AutoReportGenerator {
   static async generate(
@@ -16,16 +19,67 @@ export class AutoReportGenerator {
       options.title ||
       `Analysis of ${bundle.metadata.source || 'dataset'} (${recordCount} records)`;
 
+    log.info('Generating auto report: %s', title);
+    log.debug('Options: %O', options);
+
     const client = ProviderResolver.getClient();
 
     const prompt = this.buildPrompt(bundle, options, { title, recordCount, fields });
+    log.debug('Prompt length: %d characters', prompt.length);
+    log.debug('Prompt preview: %s', prompt.substring(0, 200) + '...');
 
+    log.info('Calling LLM for report generation...');
     const result = await client.generateText(prompt, {
       temperature: options.temperature ?? 0.4,
       maxTokens: options.maxTokens ?? 800,
     });
 
+    log.info('LLM response received');
+    log.debug('Response length: %d characters', result.text.length);
+    log.debug('Usage: %O', result.usage);
+
+    if (!result.text || result.text.trim().length === 0) {
+      log.error('LLM returned empty response!');
+      log.warn('Falling back to basic summary');
+      
+      // Fallback: generate basic summary without LLM
+      const fallbackContent = this.generateFallbackContent(bundle, { title, recordCount, fields });
+      const content = fallbackContent;
+      const end = Date.now();
+
+      const metadata = {
+        specId: undefined,
+        title,
+        style: options.style || 'default',
+        generatedAt: new Date().toISOString(),
+        bundleSource: bundle.metadata.source,
+        recordCount,
+        llmProvider: undefined,
+        llmModel: undefined,
+      };
+
+      const templateData: TemplateData = {
+        title,
+        generated_at: metadata.generatedAt,
+        record_count: recordCount,
+        fields,
+        raw_markdown: content,
+      };
+
+      const finalMarkdown = this.wrapAsMarkdown(templateData);
+      log.info('Fallback report generated: %d characters', finalMarkdown.length);
+
+      return {
+        metadata,
+        content: finalMarkdown,
+        variables: {},
+        renderTime: end - start,
+      };
+    }
+
     const content = result.text.trim();
+    log.info('LLM content: %d characters', content.length);
+
     const end = Date.now();
 
     const metadata = {
@@ -48,6 +102,7 @@ export class AutoReportGenerator {
     };
 
     const finalMarkdown = this.wrapAsMarkdown(templateData);
+    log.info('Final report: %d characters', finalMarkdown.length);
 
     return {
       metadata,
@@ -79,17 +134,17 @@ export class AutoReportGenerator {
       .map((f) => {
         switch (f) {
           case 'overview':
-            return '- High-level overview of what this dataset represents.';
+            return '- High-level overview of what this dataset represents';
           case 'trends':
-            return '- Any noticeable patterns or trends across records or fields.';
+            return '- Any noticeable patterns or trends across records or fields';
           case 'insights':
-            return '- 3–5 key insights that a decision-maker would care about.';
+            return '- 3–5 key insights that a decision-maker would care about';
           case 'anomalies':
-            return '- Any anomalies, outliers, or surprising values worth attention.';
+            return '- Any anomalies, outliers, or surprising values worth attention';
           case 'recommendations':
-            return '- Actionable recommendations based on the data.';
+            return '- Actionable recommendations based on the data';
           case 'statistics':
-            return '- Summary statistics (counts, ranges, averages) where meaningful.';
+            return '- Summary statistics (counts, ranges, averages) where meaningful';
           default:
             return `- ${f}`;
         }
@@ -98,29 +153,42 @@ export class AutoReportGenerator {
 
     const sample = bundle.samples.main.slice(0, 5);
 
-    return `You are a senior data analyst.
+    // Simplified prompt to avoid safety filters
+    return `Analyze this dataset and provide insights.
 
-A dataset has been provided with the following metadata:
+Dataset: ${info.title}
+Records: ${info.recordCount}
+Fields: ${info.fields.join(', ')}
 
-- Title: ${info.title}
-- Record count: ${info.recordCount}
-- Fields: ${info.fields.join(', ')}
-
-Here is a small JSON sample of the data (do not repeat it verbatim, just use it to understand structure):
-
+Sample data:
 ${JSON.stringify(sample, null, 2)}
 
-Write a ${depthText} in Markdown format that:
+Provide ${depthText} covering:
 
 ${focusText}
 
-Guidelines:
-- Tone: ${tone}.
-- Audience: technically literate but non-expert stakeholders.
-- Use Markdown headings (##, ###) and bullet points where appropriate.
-- Do NOT include raw JSON in the answer.
-- Do NOT mention that you are an AI; just present the analysis.
-`;
+Write in Markdown format with headings and bullet points. Keep tone ${tone}.`;
+  }
+
+  private static generateFallbackContent(
+    bundle: UniversalBundle,
+    info: { title: string; recordCount: number; fields: string[] }
+  ): string {
+    const fieldStats = bundle.stats.fieldStats;
+    
+    let content = `## Overview\n\n`;
+    content += `This dataset contains ${info.recordCount} records with ${info.fields.length} fields.\n\n`;
+    
+    content += `## Fields\n\n`;
+    info.fields.forEach(field => {
+      const stats = fieldStats[field];
+      content += `- **${field}**: ${stats.type || 'unknown'} (${stats.uniqueCount || 0} unique values)\n`;
+    });
+    
+    content += `\n## Sample Data\n\n`;
+    content += `The dataset includes records with fields: ${info.fields.join(', ')}.\n`;
+    
+    return content;
   }
 
   private static wrapAsMarkdown(data: TemplateData): string {

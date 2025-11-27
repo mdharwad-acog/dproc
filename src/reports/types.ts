@@ -12,7 +12,7 @@ export interface ReportGenerateOptions {
   depth?: 'summary' | 'standard' | 'detailed' | 'comprehensive';
 
   // What to focus on in the analysis
-  focus?: ('overview' | 'trends' | 'insights' | 'anomalies' | 'recommendations' | 'statistics')[];
+  focus?: ('overview' | 'trends' | 'insights' | 'anomalies' | 'recommendations' | 'statistics' | undefined )[];
 
   // Writing tone
   tone?: 'professional' | 'casual' | 'technical' | 'executive';
