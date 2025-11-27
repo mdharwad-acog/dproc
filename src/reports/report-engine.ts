@@ -1,3 +1,4 @@
+// src/reports/report-engine.ts
 import { join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { createLogger } from '../utils/logger.js';
@@ -5,8 +6,13 @@ import { ConfigManager } from '../config/config-manager.js';
 import { ReportSpecLoader } from './report-spec-loader.js';
 import { VariableResolver } from './variable-resolver.js';
 import { TemplateRenderer } from './template-renderer.js';
+import { AutoReportGenerator } from './auto-report-generator.js';
 import type { UniversalBundle } from '../bundles/types.js';
-import type { GeneratedReport, ReportContext } from './types.js';
+import type {
+  GeneratedReport,
+  ReportContext,
+  ReportGenerateOptions,
+} from './types.js';
 
 const log = createLogger('core:reports:engine');
 
@@ -15,9 +21,28 @@ const log = createLogger('core:reports:engine');
  */
 export class ReportEngine {
   /**
-   * Generate report from bundle and spec
-   * @param bundle - Data bundle
-   * @param specPath - Path to report spec file (absolute or relative to cwd)
+   * NEW: Auto report - no YAML, no template files, no prompt files.
+   * Uses built-in prompt and simple Markdown wrapper.
+   */
+  static async generateAuto(
+    bundle: UniversalBundle,
+    options?: ReportGenerateOptions
+  ): Promise<GeneratedReport> {
+    log.debug('Starting auto report generation');
+
+    // If advanced user provided specPath, delegate to YAML-based flow
+    if (options?.specPath) {
+      log.debug('specPath provided, delegating to generate() with spec');
+      return this.generate(bundle, options.specPath);
+    }
+
+    const report = await AutoReportGenerator.generate(bundle, options ?? {});
+    log.info('Auto report generated: %s (%dms)', report.metadata.title, report.renderTime);
+    return report;
+  }
+
+  /**
+   * Generate report from bundle and spec (YAML + templates + prompts)
    */
   static async generate(
     bundle: UniversalBundle,
@@ -67,7 +92,10 @@ export class ReportEngine {
         metadata: {
           specId: spec.id,
           generatedAt: new Date().toISOString(),
+          title: spec.name,
+          style: 'spec',
           bundleSource: bundle.metadata.source,
+          recordCount: bundle.metadata.recordCount,
           llmProvider: ConfigManager.getLlmConfig()?.provider,
           llmModel: ConfigManager.getLlmConfig()?.model,
         },
@@ -85,10 +113,7 @@ export class ReportEngine {
   }
 
   /**
-   * Generate and save report to file
-   * @param bundle - Data bundle
-   * @param specPath - Path to report spec file
-   * @param outputPath - Output file path
+   * Generate and save report to file (YAML/spec-based path)
    */
   static async generateAndSave(
     bundle: UniversalBundle,
@@ -106,9 +131,7 @@ export class ReportEngine {
   }
 
   /**
-   * Generate report with custom variables (no bundle required)
-   * @param specPath - Path to report spec file
-   * @param variables - Custom variables
+   * Generate report with custom variables (no bundle required, YAML/spec-based)
    */
   static async generateCustom(
     specPath: string,
@@ -134,6 +157,8 @@ export class ReportEngine {
         metadata: {
           specId: spec.id,
           generatedAt: new Date().toISOString(),
+          title: spec.name,
+          style: 'spec',
         },
         content,
         variables,

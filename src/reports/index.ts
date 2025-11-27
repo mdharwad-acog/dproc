@@ -1,7 +1,6 @@
+// src/reports/index.ts
 export { ReportEngine } from './report-engine.js';
-export { ReportSpecLoader } from './report-spec-loader.js';
-export { VariableResolver } from './variable-resolver.js';
-export { TemplateRenderer } from './template-renderer.js';
+export { AutoReportGenerator } from './auto-report-generator.js';
 
 export type {
   ReportSpec,
@@ -10,4 +9,5 @@ export type {
   GeneratedReport,
   ReportMetadata,
   ReportContext,
+  ReportGenerateOptions,
 } from './types.js';

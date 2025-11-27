@@ -44,13 +44,8 @@ export type {
 } from './llm/index.js';
 
 // Reports
-export {
-  ReportEngine,
-  ReportSpecLoader,
-  VariableResolver,
-  TemplateRenderer,
-} from './reports/index.js';
-
+export { ReportEngine } from './reports/report-engine.js';
+export { AutoReportGenerator } from './reports/auto-report-generator.js';
 export type {
   ReportSpec,
   ReportVariable,
@@ -58,7 +53,12 @@ export type {
   GeneratedReport,
   ReportMetadata,
   ReportContext,
-} from './reports/index.js';
+  ReportGenerateOptions,
+} from './reports/types.js';
+// src/index.ts (snippet)
+export * from './reports/index.js';
+
+
 
 // Search
 export {

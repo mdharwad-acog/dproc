@@ -40,9 +40,10 @@ Provide a JSON response with:
 
 Rules:
 - Keep answer concise (max 2 sentences)
-- Provide 2-3 key insights only
-- Include 2-3 relevant statistics
-- Respond with ONLY valid JSON, no markdown
+- Provide 2-4 key insights only
+- Include 2-4 relevant statistics
+- Use proper JSON syntax with NO line breaks in strings
+- Respond with ONLY valid JSON, no markdown, no code blocks
 
 Response:`;
 
@@ -54,7 +55,7 @@ Response:`;
         stats: Record<string, any>;
       }>(prompt, undefined, {
         temperature: options?.temperature ?? 0.7,
-        maxTokens: options?.maxTokens ?? 1000,  // ← INCREASED from 500 to 1000
+        maxTokens: options?.maxTokens ?? 1000,  // Increased from 500 to 1000
       });
 
       log.info('Results consolidated successfully');
