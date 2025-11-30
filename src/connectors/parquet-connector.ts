@@ -1,23 +1,29 @@
-import parquetjs from 'parquetjs';
-import { BaseConnector } from './base-connector.js';
-import type { ConnectorMetadata, ConnectorOptions } from '../types/index.js';
+import pkg from "parquetjs";
+import { BaseConnector } from "./base-connector.js";
+import { validateParquetConnectorOptions } from "../types/schema.js";
+import type { ConnectorMetadata } from "../types/index.js";
+import type { ParquetConnectorOptions } from "../types/schema.js";
 
-// Extract ParquetReader from default export
-const { ParquetReader } = parquetjs;
+const { ParquetReader } = pkg;
 
 export class ParquetConnector extends BaseConnector<Record<string, any>> {
   readonly metadata: ConnectorMetadata = {
-    name: 'parquet-connector',
-    version: '1.0.0',
-    extensions: ['.parquet'],
+    name: "parquet-connector",
+    version: "1.0.0",
+    extensions: [".parquet"],
     supportsStreaming: true,
   };
 
   async read(
     filePath: string,
-    options?: ConnectorOptions
+    options?: ParquetConnectorOptions
   ): Promise<Record<string, any>[]> {
-    this.log.debug('Reading Parquet file: %s', filePath);
+    this.log.debug("Reading Parquet file: %s", filePath);
+
+    // Validate options
+    const validatedOptions = options
+      ? validateParquetConnectorOptions(options)
+      : undefined;
 
     const records: Record<string, any>[] = [];
 
@@ -26,58 +32,66 @@ export class ParquetConnector extends BaseConnector<Record<string, any>> {
       async (chunk) => {
         records.push(...chunk);
       },
-      options
+      validatedOptions
     );
 
-    this.log.info('Read %d records from %s', records.length, filePath);
+    this.log.info("Read %d records from %s", records.length, filePath);
     return records;
   }
 
   async stream(
     filePath: string,
     onChunk: (chunk: Record<string, any>[]) => Promise<void>,
-    options?: ConnectorOptions
+    options?: ParquetConnectorOptions
   ): Promise<void> {
-    this.log.debug('Streaming Parquet file: %s', filePath);
+    this.log.debug("Streaming Parquet file: %s", filePath);
 
-    const chunkSize = options?.chunkSize || 10000;
-    let buffer: Record<string, any>[] = [];
-    let totalRecords = 0;
+    // Validate options
+    const validatedOptions = options
+      ? validateParquetConnectorOptions(options)
+      : undefined;
+
+    const chunkSize = validatedOptions?.chunkSize || 1000;
 
     try {
       const reader = await ParquetReader.openFile(filePath);
       const cursor = reader.getCursor();
 
+      let buffer: Record<string, any>[] = [];
       let record = null;
+      let totalRecords = 0;
+
       while ((record = await cursor.next())) {
         buffer.push(record);
 
         if (buffer.length >= chunkSize) {
-          this.log.debug('Processing chunk of %d records', buffer.length);
+          this.log.debug("Processing chunk of %d records", buffer.length);
           await onChunk([...buffer]);
           totalRecords += buffer.length;
           buffer = [];
         }
       }
 
+      // Process remaining records
       if (buffer.length > 0) {
-        this.log.debug('Processing final chunk of %d records', buffer.length);
+        this.log.debug("Processing final chunk of %d records", buffer.length);
         await onChunk(buffer);
         totalRecords += buffer.length;
       }
 
       await reader.close();
-      this.log.info('Streamed total of %d records', totalRecords);
-    } catch (error) {
-      this.log.error('Failed to stream Parquet file: %O', error);
-      throw new Error(`Failed to stream Parquet file: ${filePath}`);
+      this.log.info("Streamed total of %d records", totalRecords);
+    } catch (error: any) {
+      this.log.error("Parquet reading error: %O", error);
+      throw new Error(`Failed to read Parquet file: ${error.message}`);
     }
   }
 
   inferSchema(sample: Record<string, any>[]): Record<string, string> {
-    this.log.debug('Inferring schema from %d samples', sample.length);
+    this.log.debug("Inferring schema from %d samples", sample.length);
 
     if (sample.length === 0) {
+      this.log.warn("Empty sample provided for schema inference");
       return {};
     }
 
@@ -85,16 +99,10 @@ export class ParquetConnector extends BaseConnector<Record<string, any>> {
     const firstRecord = sample[0];
 
     for (const [key, value] of Object.entries(firstRecord)) {
-      if (value === null || value === undefined) {
-        schema[key] = 'unknown';
-      } else if (Array.isArray(value)) {
-        schema[key] = 'array';
-      } else {
-        schema[key] = typeof value;
-      }
+      schema[key] = typeof value;
     }
 
-    this.log.debug('Inferred schema: %O', schema);
+    this.log.debug("Inferred schema: %O", schema);
     return schema;
   }
 }

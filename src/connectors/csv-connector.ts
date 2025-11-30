@@ -1,14 +1,9 @@
 import { createReadStream } from 'node:fs';
 import { parse } from 'csv-parse';
 import { BaseConnector } from './base-connector.js';
-import type { ConnectorMetadata, ConnectorOptions } from '../types/index.js';
-
-export interface CsvOptions extends ConnectorOptions {
-  delimiter?: string;
-  columns?: boolean | string[];
-  skipEmptyLines?: boolean;
-  trim?: boolean;
-}
+import { validateCsvConnectorOptions } from '../types/schema.js';
+import type { ConnectorMetadata } from '../types/index.js';
+import type { CsvConnectorOptions } from '../types/schema.js';
 
 export class CsvConnector extends BaseConnector<Record<string, any>> {
   readonly metadata: ConnectorMetadata = {
@@ -20,9 +15,12 @@ export class CsvConnector extends BaseConnector<Record<string, any>> {
 
   async read(
     filePath: string,
-    options?: CsvOptions
+    options?: CsvConnectorOptions
   ): Promise<Record<string, any>[]> {
     this.log.debug('Reading CSV file: %s', filePath);
+    
+    // Validate options
+    const validatedOptions = options ? validateCsvConnectorOptions(options) : undefined;
     
     const records: Record<string, any>[] = [];
     
@@ -31,7 +29,7 @@ export class CsvConnector extends BaseConnector<Record<string, any>> {
       async (chunk) => {
         records.push(...chunk);
       },
-      options
+      validatedOptions
     );
 
     this.log.info('Read %d records from %s', records.length, filePath);
@@ -41,22 +39,28 @@ export class CsvConnector extends BaseConnector<Record<string, any>> {
   async stream(
     filePath: string,
     onChunk: (chunk: Record<string, any>[]) => Promise<void>,
-    options?: CsvOptions
+    options?: CsvConnectorOptions
   ): Promise<void> {
     this.log.debug('Streaming CSV file: %s', filePath);
 
-    const chunkSize = options?.chunkSize || 10000;
-    const delimiter = options?.delimiter || ',';
+    // Validate options
+    const validatedOptions = options ? validateCsvConnectorOptions(options) : undefined;
+
+    const chunkSize = validatedOptions?.chunkSize || 1000;
+    const delimiter = validatedOptions?.delimiter || ',';
 
     return new Promise((resolve, reject) => {
       const parser = createReadStream(filePath, {
-        encoding: options?.encoding || 'utf8',
+        encoding: validatedOptions?.encoding || 'utf-8',
       }).pipe(
         parse({
-          columns: options?.columns ?? true,
+          columns: validatedOptions?.columns ?? true,
           delimiter,
-          skip_empty_lines: options?.skipEmptyLines ?? true,
-          trim: options?.trim ?? true,
+          skip_empty_lines: validatedOptions?.skipEmptyLines ?? true,
+          quote: validatedOptions?.quote,
+          escape: validatedOptions?.escape,
+          from_line: validatedOptions?.fromLine,
+          to_line: validatedOptions?.toLine,
         })
       );
 

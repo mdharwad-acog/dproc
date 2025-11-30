@@ -12,7 +12,7 @@ export interface UniversalBundle {
 export interface BundleMetadata {
   source: string;
   sourceFile: string;
-  format: 'csv' | 'json' | 'xml' | 'parquet' | 'unknown';
+  format: "csv" | "json" | "xml" | "parquet" | "unknown";
   ingestedAt: string;
   recordCount: number;
   processingSteps: string[];

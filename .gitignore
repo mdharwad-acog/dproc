@@ -38,3 +38,46 @@ coverage/
 # Temp
 temp/
 tmp/
+
+error.txt
+*.log
+test-data/
+dist/
+node_modules/
+.env
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Credentials
+credentials/
+*.enc
+
+# Build
+dist/
+node_modules/
+
+# Logs
+*.log
+logs/
+error.txt
+
+# Cache
+cache/
+.dproc/
+
+# Testing
+coverage/
+test-data/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Config files with secrets
+config.json
+config.yml
+dproc.config.yml

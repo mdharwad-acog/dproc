@@ -1,31 +1,29 @@
 /**
  * Reports Layer Types
+ * Re-export from schemas for backward compatibility
  */
 
-// ========= New option-based API (for auto reports) =========
+export type {
+  ReportStyle,
+  ReportDepth,
+  ReportSection,
+  ReportMetadata,
+  ReportOptions,
+  Report,
+} from "./schema.js";
+
+// ========= Simplified API for auto reports =========
 
 export interface ReportGenerateOptions {
-  // High-level style of the report
-  style?: 'default' | 'executive' | 'technical' | 'sales' | 'audit';
-
-  // How detailed the report should be
-  depth?: 'summary' | 'standard' | 'detailed' | 'comprehensive';
-
-  // What to focus on in the analysis
-  focus?: ('overview' | 'trends' | 'insights' | 'anomalies' | 'recommendations' | 'statistics' | undefined )[];
-
-  // Writing tone
-  tone?: 'professional' | 'casual' | 'technical' | 'executive';
-
-  // Override title
+  // Just title - keep it simple
   title?: string;
-
-  // LLM options
-  temperature?: number;
-  maxTokens?: number;
 
   // Advanced: use existing YAML spec instead of auto report
   specPath?: string;
+
+  // Optional: LLM overrides
+  temperature?: number;
+  maxTokens?: number;
 }
 
 // ========= Existing YAML-based spec types (kept for compatibility) =========
@@ -36,20 +34,20 @@ export interface ReportSpec {
   description?: string;
   templateFile: string;
   variables: ReportVariable[];
-  options?: ReportOptions;
+  options?: ReportSpecOptions;
 }
 
 export interface ReportVariable {
   name: string;
-  type: 'string' | 'number' | 'markdown' | 'json' | 'array' | 'llm_generated';
-  source?: 'bundle' | 'llm' | 'computed';
+  type: "string" | "number" | "markdown" | "json" | "array" | "llm_generated";
+  source?: "bundle" | "llm" | "computed";
   promptFile?: string;
   inputs?: string[];
   defaultValue?: any;
   required?: boolean;
 }
 
-export interface ReportOptions {
+export interface ReportSpecOptions {
   temperature?: number;
   maxTokens?: number;
   cachePrompts?: boolean;
@@ -58,13 +56,13 @@ export interface ReportOptions {
 // ========= Shared types =========
 
 export interface GeneratedReport {
-  metadata: ReportMetadata;
+  metadata: GeneratedReportMetadata;
   content: string;
   variables?: Record<string, any>;
   renderTime: number;
 }
 
-export interface ReportMetadata {
+export interface GeneratedReportMetadata {
   specId?: string;
   generatedAt: string;
   title: string;

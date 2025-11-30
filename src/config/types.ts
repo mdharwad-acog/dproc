@@ -37,3 +37,10 @@ export interface LlmConfig {
   temperature?: number;
   maxTokens?: number;
 }
+
+// Re-export types from schemas for backward compatibility
+export type {
+  LlmProvider,
+  ReportStyle,
+  ReportDepth,
+} from './schema.js';

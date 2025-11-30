@@ -10,3 +10,6 @@ export type {
   MdxExportOptions,
   ExportResult,
 } from './types.js';
+
+// Export schemas
+export * from './schema.js';

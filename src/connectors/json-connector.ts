@@ -1,8 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import { BaseConnector } from './base-connector.js';
-import type { ConnectorMetadata, ConnectorOptions } from '../types/index.js';
+import { validateJsonConnectorOptions } from '../types/schema.js';
+import type { ConnectorMetadata } from '../types/index.js';
+import type { JsonConnectorOptions } from '../types/schema.js';
 
-export class JsonConnector extends BaseConnector<Record<string, any>> {
+export class JsonConnector extends BaseConnector<any> {
   readonly metadata: ConnectorMetadata = {
     name: 'json-connector',
     version: '1.0.0',
@@ -10,42 +12,50 @@ export class JsonConnector extends BaseConnector<Record<string, any>> {
     supportsStreaming: false,
   };
 
-  async read(
-    filePath: string,
-    options?: ConnectorOptions
-  ): Promise<Record<string, any>[]> {
+  async read(filePath: string, options?: JsonConnectorOptions): Promise<any> {
     this.log.debug('Reading JSON file: %s', filePath);
+    
+    // Validate options
+    const validatedOptions = options ? validateJsonConnectorOptions(options) : undefined;
 
     try {
       const content = await readFile(filePath, {
-        encoding: options?.encoding || 'utf8',
+        encoding: validatedOptions?.encoding || 'utf-8',
       });
 
       const data = JSON.parse(content);
-      const records = Array.isArray(data) ? data : [data];
 
-      this.log.info('Read %d records from %s', records.length, filePath);
-      return records;
-    } catch (error) {
+      // Navigate to specific path if provided
+      if (validatedOptions?.recordPath) {
+        const result = this.getNestedValue(data, validatedOptions.recordPath);
+        this.log.info('Extracted data from path: %s', validatedOptions.recordPath);
+        return result;
+      }
+
+      this.log.info('Read JSON file: %s', filePath);
+      return data;
+    } catch (error: any) {
       this.log.error('Failed to read JSON file: %O', error);
-      throw new Error(`Failed to read JSON file: ${filePath}`);
+      throw new Error(`Failed to read JSON file: ${error.message}`);
     }
   }
 
   async stream(
     filePath: string,
-    onChunk: (chunk: Record<string, any>[]) => Promise<void>,
-    options?: ConnectorOptions
+    onChunk: (chunk: any[]) => Promise<void>,
+    options?: JsonConnectorOptions
   ): Promise<void> {
-    this.log.debug('Streaming JSON file (loading all): %s', filePath);
-    const records = await this.read(filePath, options);
-    await onChunk(records);
+    // For JSON, we load all data and send as single chunk
+    const data = await this.read(filePath, options);
+    const array = Array.isArray(data) ? data : [data];
+    await onChunk(array);
   }
 
-  inferSchema(sample: Record<string, any>[]): Record<string, string> {
+  inferSchema(sample: any[]): Record<string, string> {
     this.log.debug('Inferring schema from %d samples', sample.length);
 
     if (sample.length === 0) {
+      this.log.warn('Empty sample provided for schema inference');
       return {};
     }
 
@@ -53,16 +63,14 @@ export class JsonConnector extends BaseConnector<Record<string, any>> {
     const firstRecord = sample[0];
 
     for (const [key, value] of Object.entries(firstRecord)) {
-      if (value === null || value === undefined) {
-        schema[key] = 'unknown';
-      } else if (Array.isArray(value)) {
-        schema[key] = 'array';
-      } else {
-        schema[key] = typeof value;
-      }
+      schema[key] = typeof value;
     }
 
     this.log.debug('Inferred schema: %O', schema);
     return schema;
+  }
+
+  private getNestedValue(obj: any, path: string): any {
+    return path.split('.').reduce((current, key) => current?.[key], obj);
   }
 }

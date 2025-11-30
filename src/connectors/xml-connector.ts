@@ -1,14 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import { XMLParser } from 'fast-xml-parser';
 import { BaseConnector } from './base-connector.js';
-import type { ConnectorMetadata, ConnectorOptions } from '../types/index.js';
+import { validateXmlConnectorOptions } from '../types/schema.js';
+import type { ConnectorMetadata } from '../types/index.js';
+import type { XmlConnectorOptions } from '../types/schema.js';
 
-export interface XmlOptions extends ConnectorOptions {
-  ignoreAttributes?: boolean;
-  recordPath?: string;
-}
-
-export class XmlConnector extends BaseConnector<Record<string, any>> {
+export class XmlConnector extends BaseConnector<any> {
   readonly metadata: ConnectorMetadata = {
     name: 'xml-connector',
     version: '1.0.0',
@@ -16,63 +13,57 @@ export class XmlConnector extends BaseConnector<Record<string, any>> {
     supportsStreaming: false,
   };
 
-  async read(
-    filePath: string,
-    options?: XmlOptions
-  ): Promise<Record<string, any>[]> {
+  async read(filePath: string, options?: XmlConnectorOptions): Promise<any> {
     this.log.debug('Reading XML file: %s', filePath);
+
+    // Validate options
+    const validatedOptions = options ? validateXmlConnectorOptions(options) : undefined;
 
     try {
       const content = await readFile(filePath, {
-        encoding: options?.encoding || 'utf8',
+        encoding: validatedOptions?.encoding || 'utf-8',
       });
 
       const parser = new XMLParser({
-        ignoreAttributes: options?.ignoreAttributes ?? false,
-        parseAttributeValue: true,
-        parseTagValue: true,
+        ignoreAttributes: validatedOptions?.ignoreAttributes ?? false,
+        attributeNamePrefix: validatedOptions?.attributeNamePrefix || '@_',
+        textNodeName: validatedOptions?.textNodeName || '#text',
+        isArray: () => validatedOptions?.arrayMode ?? false,
       });
 
-      const parsed = parser.parse(content);
-      
-      let records = parsed;
-      if (options?.recordPath) {
-        const pathParts = options.recordPath.split('.');
-        for (const part of pathParts) {
-          if (records && typeof records === 'object' && part in records) {
-            records = records[part];
-          } else {
-            this.log.warn('Record path not found: %s', options.recordPath);
-            records = [];
-            break;
-          }
-        }
+      const data = parser.parse(content);
+
+      // Navigate to specific path if provided
+      if (validatedOptions?.recordPath) {
+        const result = this.getNestedValue(data, validatedOptions.recordPath);
+        this.log.info('Extracted data from path: %s', validatedOptions.recordPath);
+        return result;
       }
 
-      const recordsArray = Array.isArray(records) ? records : [records];
-
-      this.log.info('Read %d records from %s', recordsArray.length, filePath);
-      return recordsArray;
-    } catch (error) {
+      this.log.info('Read XML file: %s', filePath);
+      return data;
+    } catch (error: any) {
       this.log.error('Failed to read XML file: %O', error);
-      throw new Error(`Failed to read XML file: ${filePath}`);
+      throw new Error(`Failed to read XML file: ${error.message}`);
     }
   }
 
   async stream(
     filePath: string,
-    onChunk: (chunk: Record<string, any>[]) => Promise<void>,
-    options?: XmlOptions
+    onChunk: (chunk: any[]) => Promise<void>,
+    options?: XmlConnectorOptions
   ): Promise<void> {
-    this.log.debug('Streaming XML file (loading all): %s', filePath);
-    const records = await this.read(filePath, options);
-    await onChunk(records);
+    // For XML, we load all data and send as single chunk
+    const data = await this.read(filePath, options);
+    const array = Array.isArray(data) ? data : [data];
+    await onChunk(array);
   }
 
-  inferSchema(sample: Record<string, any>[]): Record<string, string> {
+  inferSchema(sample: any[]): Record<string, string> {
     this.log.debug('Inferring schema from %d samples', sample.length);
 
     if (sample.length === 0) {
+      this.log.warn('Empty sample provided for schema inference');
       return {};
     }
 
@@ -80,16 +71,14 @@ export class XmlConnector extends BaseConnector<Record<string, any>> {
     const firstRecord = sample[0];
 
     for (const [key, value] of Object.entries(firstRecord)) {
-      if (value === null || value === undefined) {
-        schema[key] = 'unknown';
-      } else if (Array.isArray(value)) {
-        schema[key] = 'array';
-      } else {
-        schema[key] = typeof value;
-      }
+      schema[key] = typeof value;
     }
 
     this.log.debug('Inferred schema: %O', schema);
     return schema;
+  }
+
+  private getNestedValue(obj: any, path: string): any {
+    return path.split('.').reduce((current, key) => current?.[key], obj);
   }
 }
