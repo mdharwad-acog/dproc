@@ -2,7 +2,7 @@
 
 > 🎓 **Training Project** - AI-powered data processing engine built as a learning exercise
 
-[![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)](https://npm.aganitha.ai/@aganitha/dproc)
+[![Version](https://img.shields.io/badge/version-1.0.2-blue.svg)](https://npm.aganitha.ai/@aganitha/dproc)
 [![Status](https://img.shields.io/badge/status-training-orange.svg)](https://npm.aganitha.ai/@aganitha/dproc)
 
 ## ⚠️ Important Disclaimer
@@ -23,22 +23,29 @@
 dproc is an educational data processing engine that demonstrates:
 
 - Multi-format data ingestion (CSV, JSON, XML, Parquet)
-- LLM integration for AI-powered reports
+- LLM integration for AI-powered reports (Gemini/OpenAI/DeepSeek)
 - Natural language search over structured data
+- Secure API key management with keytar
+- Zod-based configuration validation
 - Multi-format export (HTML, PDF, MDX)
 
-**Built to learn:** Modern TypeScript patterns, AI SDK integration, and data pipeline architecture.
+**Built to learn:** Modern TypeScript patterns, AI SDK integration, secure credential storage, schema validation, and data pipeline architecture.
 
 ---
 
 ## Installation
 
-```
-# Install from Aganitha registry
+Configure Aganitha private registry (one-time setup)
+npm config set @aganitha:registry https://npm.aganitha.ai/
+
+Install from Aganitha registry
 npm install @aganitha/dproc
-```
+
+or
+pnpm add @aganitha/dproc
 
 **Prerequisites:**
+
 - Node.js >= 18.0.0
 - npm registry configured for @aganitha scope
 - Gemini/OpenAI/DeepSeek API key (for LLM features)
@@ -47,57 +54,56 @@ npm install @aganitha/dproc
 
 ## Quick Start
 
-```
-import { 
+```javascript
+import {
   ConfigManager,
   ConnectorRegistry,
   BundleBuilder,
-  SearchEngine
-} from '@aganitha/dproc';
+  SearchEngine,
+} from "@aganitha/dproc";
 
-// 1. Initialize (required)
+// 1. Initialize (required) - auto-loads from keytar/env/config files
 ConfigManager.init({
   llm: {
-    provider: 'gemini',
-    model: 'gemini-1.5-flash',
-    apiKey: process.env.GEMINI_API_KEY,
+    provider: "gemini",
+    model: "gemini-1.5-flash",
+    // apiKey auto-loaded from keytar or GEMINI_API_KEY env var
   },
 });
 
-// 2. Load data
-const connector = ConnectorRegistry.getByFilePath('data.csv');
-const records = await connector.read('data.csv');
+// 2. Load data (auto-detects format from extension)
+const connector = ConnectorRegistry.getByFilePath("data.csv");
+const records = await connector.read("data.csv");
 
-// 3. Create bundle
+// 3. Create bundle with automatic statistics
 const bundle = BundleBuilder.create(records, {
-  source: 'my-data',
-  format: 'csv',
+  source: "my-data",
+  format: "csv",
 });
 
 // 4. Search with natural language
 const results = await SearchEngine.query(bundle, "Find all active users");
-console.log(results.answer); // AI-generated answer
+console.log(results.answer); // AI-generated natural language answer
 console.log(results.matchingRecords); // Filtered data
+console.log(results.insights); // AI-generated insights
 ```
 
 ---
 
 ## Architecture
 
-dproc is organized into 7 layers:
+dproc is organized into 7 independent layers:
 
-```
 @aganitha/dproc
-├── 1. Configuration Layer - LLM config, directories
+├── 1. Configuration Layer - ConfigManager, keytar, Zod validation
 ├── 2. Connectors Layer - CSV, JSON, XML, Parquet readers
-├── 3. Bundles Layer - Normalized data with stats
-├── 4. LLM Layer - AI SDK integration
-├── 5. Reports Layer - Template-driven report generation
-├── 6. Search Layer - NL search with AI query planning
-└── 7. Exports Layer - HTML, PDF, MDX output
-```
+├── 3. Bundles Layer - Normalized data format with statistics
+├── 4. LLM Layer - AI SDK integration (Gemini/OpenAI/DeepSeek)
+├── 5. Reports Layer - Template-driven report generation (Nunjucks)
+├── 6. Search Layer - Natural language search with query planning
+└── 7. Exports Layer - HTML, PDF, MDX output (Puppeteer)
 
-Each layer is independent and can be used separately.
+Each layer is independent and can be used separately for modular development.
 
 ---
 
@@ -105,121 +111,189 @@ Each layer is independent and can be used separately.
 
 ### 1. Data Connectors
 
-Read multiple formats with automatic detection:
+Read multiple formats with automatic format detection:
 
-```
-import { ConnectorRegistry } from '@aganitha/dproc';
+```javascript
+import {
+  ConnectorRegistry,
+  CsvConnector,
+  ParquetConnector,
+} from "@aganitha/dproc";
 
-// Auto-detect format by extension
-const connector = ConnectorRegistry.getByFilePath('data.csv');
-const records = await connector.read('data.csv');
+// Auto-detect format by file extension
+const connector = ConnectorRegistry.getByFilePath("data.csv");
+const records = await connector.read("data.csv");
 
-// Or use specific connector
-import { CsvConnector, JsonConnector } from '@aganitha/dproc';
-const csvData = await new CsvConnector().read('file.csv');
-const jsonData = await new JsonConnector().read('file.json');
+// Or use specific connectors directly
+const csvData = await new CsvConnector().read("sales.csv");
+const parquetData = await new ParquetConnector().read("events.parquet");
 ```
 
 **Supported formats:**
+
 - CSV/TSV (with streaming for large files)
 - JSON (with streaming)
 - XML
 - Parquet (with streaming)
 
+**Registry methods:**
+ConnectorRegistry.getByFilePath(path: string): BaseConnector
+ConnectorRegistry.getByExtension(ext: string): BaseConnector
+
 ---
 
 ### 2. Bundles (Normalized Data)
 
-Create universal data bundles with automatic statistics:
+Create universal data bundles with automatic field-level statistics:
 
-```
-import { BundleBuilder, BundleLoader } from '@aganitha/dproc';
+```javascript
+import { BundleBuilder, BundleLoader } from "@aganitha/dproc";
 
-// Create bundle
+// Create bundle from records
 const bundle = BundleBuilder.create(records, {
-  source: 'customer-data',
-  format: 'csv',
-  sourceFile: 'customers.csv',
+  source: "customer-data",
+  format: "csv",
 });
 
-// Bundle includes:
-console.log(bundle.metadata); // Source, format, record count
-console.log(bundle.stats); // Field-level statistics
-console.log(bundle.samples); // Sample records
+// Bundle automatically includes:
+console.log(bundle.metadata); // Source, format, record count, timestamps
+console.log(bundle.stats); // Field-level statistics (types, nulls, unique counts)
+console.log(bundle.samples); // First records + random samples
 
-// Save and load
-await BundleLoader.save(bundle, 'bundle.json');
-const loaded = await BundleLoader.load('bundle.json');
+// Persist bundles to disk
+await BundleLoader.save(bundle, "customers.bundle.json");
+const loaded = await BundleLoader.load("customers.bundle.json");
+```
+
+**Bundle structure:**
+
+```javascript
+{
+metadata: {
+source: string,
+format: 'csv' | 'json' | 'xml' | 'parquet',
+recordCount: number,
+createdAt: string
+},
+records: Record<string, any>[],
+stats: {
+fieldStats: {
+[fieldName]: {
+type: string,
+uniqueCount: number,
+nullCount: number,
+min?: any,
+max?: any
+}
+}
+},
+samples: {
+first: any[],
+random: any[]
+}
+}
 ```
 
 ---
 
 ### 3. Natural Language Search
 
-Search data using plain English:
+Search data using plain English queries:
 
-```
-import { SearchEngine } from '@aganitha/dproc';
+```javascript
+import { SearchEngine } from "@aganitha/dproc";
 
-const results = await SearchEngine.query(bundle, "Who is older than 30?");
+const results = await SearchEngine.query(
+  bundle,
+  "Who are customers older than 30 in California?",
+  { limit: 10 }
+);
 
+// Results include:
 console.log(results.answer); // AI-generated natural language answer
-console.log(results.insights); // ["50% of users are over 30", ...]
-console.log(results.stats); // { average_age: 32, count: 42 }
-console.log(results.matchingRecords); // Filtered data
+console.log(results.insights); // ["50% of California customers are over 30", ...]
+console.log(results.stats); // { average_age: 35.2, total: 42 }
+console.log(results.matchingRecords); // Filtered data matching criteria
 console.log(results.totalMatches); // 42
+console.log(results.executionTimeMs); // Performance metrics
 ```
 
 **How it works:**
-1. LLM converts natural language → structured query
-2. Query executor filters data (pure JavaScript)
-3. LLM generates insights from results
+
+1. LLM converts natural language → structured filter query
+2. Query executor filters data using pure JavaScript (no database)
+3. LLM analyzes results and generates insights + natural language answer
+
+**Search options:**
+
+```javascript
+{
+limit?: number; // Max results (default from config)
+temperature?: number; // LLM creativity (default from config)
+}
+```
 
 ---
 
 ### 4. AI-Powered Reports
 
-Generate reports using YAML specs and templates:
+Generate reports using YAML specifications and Nunjucks templates:
 
-```
-import { ReportEngine } from '@aganitha/dproc';
+```javascript
+import { ReportEngine, AutoReportGenerator } from "@aganitha/dproc";
 
-// Generate report
-const report = await ReportEngine.generate(bundle, 'report-spec.yaml');
+// Generate report from YAML spec
+const report = await ReportEngine.generate(bundle, "report-spec.yaml");
 
-console.log(report.content); // Markdown report
+console.log(report.content); // Generated Markdown report
 console.log(report.variables); // All resolved variables
 console.log(report.metadata); // Generation metadata
 
-// Save to file
+// Save directly to file
 await ReportEngine.generateAndSave(
-  bundle, 
-  'report-spec.yaml', 
-  'output.md'
+  bundle,
+  "quarterly-report.yaml",
+  "output/q4-report.md"
 );
+
+// Auto-generate report without spec (uses AI)
+const autoReport = await AutoReportGenerator.generate(bundle, {
+  style: "detailed",
+  depth: "comprehensive",
+});
 ```
 
 **Report spec example** (report-spec.yaml):
 
-```
+```yml
 id: summary-report
-name: Data Summary Report
-templateFile: summary.njk
+name: Customer Data Summary
+templateFile: customer-summary.njk
 
 variables:
-  - name: recordCount
-    type: number
-    source: bundle
-    
-  - name: summary
-    type: markdown
-    source: llm
-    promptFile: generate-summary.prompt.md
-    
+
+name: recordCount
+type: number
+source: bundle
+
+name: topCustomers
+type: array
+source: bundle
+
+name: insights
+type: markdown
+source: llm
+promptFile: generate-insights.prompt.md
+
 options:
-  temperature: 0.7
-  maxTokens: 1000
+temperature: 0.7
+maxTokens: 2000
 ```
+
+**Variable sources:**
+
+- `bundle` - Extract from bundle metadata/records
+- `llm` - Generate using AI with custom prompts
 
 ---
 
@@ -227,142 +301,189 @@ options:
 
 Export reports to HTML, PDF, or MDX:
 
-```
-import { HtmlExporter, PdfExporter, MdxExporter } from '@aganitha/dproc';
+```javascript
+import { HtmlExporter, PdfExporter, MdxExporter } from "@aganitha/dproc";
 
-// Export to HTML
-await new HtmlExporter().export('report.md', 'report.html', {
-  title: 'My Report',
+// Export to HTML (with Bootstrap styling)
+await new HtmlExporter().export("report.md", "report.html", {
+  title: "Q4 Sales Report",
   includeBootstrap: true,
   includeTableOfContents: true,
 });
 
-// Export to PDF
-await new PdfExporter().export('report.md', 'report.pdf', {
-  format: 'A4',
-  orientation: 'portrait',
+// Export to PDF (using Puppeteer)
+await new PdfExporter().export("report.md", "report.pdf", {
+  format: "A4",
+  orientation: "portrait",
 });
 
-// Export to MDX (for Next.js docs)
-await new MdxExporter().export('report.md', 'report.mdx', {
+// Export to MDX (for Next.js/Docusaurus)
+await new MdxExporter().export("report.md", "report.mdx", {
   frontmatter: {
-    title: 'My Report',
-    date: '2024-01-01',
+    title: "Q4 Sales Report",
+    date: "2024-12-01",
+    tags: ["sales", "quarterly"],
   },
 });
 ```
+
+**Export formats:**
+
+- **HTML** - Styled with Bootstrap, includes table of contents
+- **PDF** - Generated via Puppeteer headless Chrome
+- **MDX** - For Next.js/Docusaurus documentation sites
 
 ---
 
 ## Complete Example
 
-```
+```javascript
 import {
   ConfigManager,
   ConnectorRegistry,
   BundleBuilder,
+  BundleLoader,
   SearchEngine,
   ReportEngine,
   HtmlExporter,
-} from '@aganitha/dproc';
+  PdfExporter,
+} from "@aganitha/dproc";
 
-async function processData() {
-  // 1. Configure
+async function analyzeData() {
+  // 1. Initialize configuration (auto-loads API keys)
   ConfigManager.init({
     llm: {
-      provider: 'gemini',
-      model: 'gemini-1.5-flash',
-      apiKey: process.env.GEMINI_API_KEY,
+      provider: "gemini",
+      model: "gemini-1.5-flash",
+      // apiKey auto-loaded from keytar or env
     },
-    promptsDir: './prompts',
-    templatesDir: './templates',
   });
 
-  // 2. Ingest data
-  const connector = ConnectorRegistry.getByFilePath('sales.csv');
-  const records = await connector.read('sales.csv');
+  // 2. Load and ingest data
+  const connector = ConnectorRegistry.getByFilePath("sales-2024.csv");
+  const records = await connector.read("sales-2024.csv");
 
-  // 3. Create bundle
+  // 3. Create and save bundle
   const bundle = BundleBuilder.create(records, {
-    source: 'sales-data',
-    format: 'csv',
+    source: "annual-sales",
+    format: "csv",
   });
+  await BundleLoader.save(bundle, "bundles/sales-2024.bundle.json");
 
-  // 4. Search
-  const results = await SearchEngine.query(
-    bundle, 
-    "What were sales in Q4?"
+  // 4. Natural language search
+  const q4Results = await SearchEngine.query(
+    bundle,
+    "What were total sales in Q4 by region?"
   );
-  console.log('Answer:', results.answer);
-  console.log('Insights:', results.insights);
+  console.log("Answer:", q4Results.answer);
+  console.log("Insights:", q4Results.insights);
+  console.log("Stats:", q4Results.stats);
 
-  // 5. Generate report
+  // 5. Generate comprehensive report
   await ReportEngine.generateAndSave(
     bundle,
-    'quarterly-report.yaml',
-    'q4-report.md'
+    "specs/annual-report.yaml",
+    "output/annual-sales-report.md"
   );
 
-  // 6. Export to PDF
+  // 6. Export to multiple formats
   await new HtmlExporter().export(
-    'q4-report.md',
-    'q4-report.html'
+    "output/annual-sales-report.md",
+    "output/annual-sales-report.html"
+  );
+
+  await new PdfExporter().export(
+    "output/annual-sales-report.md",
+    "output/annual-sales-report.pdf"
   );
 }
 
-processData().catch(console.error);
+analyzeData().catch(console.error);
 ```
 
 ---
 
 ## Configuration
 
-### LLM Providers
+### Configuration Priority (Highest to Lowest)
 
-```
-// Gemini (Google)
+1. **keytar** - Secure system keychain (`apikey-gemini`, `apikey-openai`, `apikey-deepseek`)
+2. **Environment variables** - `GEMINI_API_KEY`, `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`
+3. **Project config** - `dproc.config.yml` (in current directory)
+4. **Global config** - `~/.dproc/config.yml` or `~/.dproc/config.json`
+
+### LLM Provider Configuration
+
+```javascript
+// Gemini (Google) - Recommended for learning
 ConfigManager.init({
   llm: {
-    provider: 'gemini',
-    model: 'gemini-1.5-flash',
-    apiKey: process.env.GEMINI_API_KEY,
+    provider: "gemini",
+    model: "gemini-1.5-flash", // or 'gemini-1.5-pro'
+    // apiKey auto-loaded
   },
 });
 
 // OpenAI
 ConfigManager.init({
   llm: {
-    provider: 'openai',
-    model: 'gpt-4',
-    apiKey: process.env.OPENAI_API_KEY,
+    provider: "openai",
+    model: "gpt-4o-mini", // or 'gpt-4', 'gpt-4o'
   },
 });
 
 // DeepSeek
 ConfigManager.init({
   llm: {
-    provider: 'deepseek',
-    model: 'deepseek-chat',
-    apiKey: process.env.DEEPSEEK_API_KEY,
+    provider: "deepseek",
+    model: "deepseek-chat", // or 'deepseek-reasoner'
   },
 });
 ```
 
-### Full Configuration
+### Full Configuration Example
 
-```
+```javascript
 ConfigManager.init({
   llm: {
-    provider: 'gemini',
-    model: 'gemini-1.5-flash',
-    apiKey: process.env.GEMINI_API_KEY,
-    temperature: 0.7,      // Default: 0.7
-    maxTokens: 2000,       // Default: 2000
+    provider: "gemini",
+    model: "gemini-1.5-flash",
+    apiKey: process.env.GEMINI_API_KEY, // or auto-loaded
+    temperature: 0.7, // LLM creativity (0-1)
+    maxTokens: 2000, // Response length
   },
-  promptsDir: './prompts',      // Optional
-  templatesDir: './templates',  // Optional
-  bundlesDir: './bundles',      // Optional
+  templates: {
+    customDir: "./templates", // Custom Nunjucks templates
+  },
+  prompts: {
+    customDir: "./prompts", // Custom LLM prompts
+  },
+  defaultOutputDir: "./output",
+  search: {
+    defaultLimit: 10,
+    temperature: 0.7,
+  },
+  export: {
+    defaultFormats: ["html", "pdf"],
+    includeTableOfContents: true,
+  },
 });
+```
+
+### Secure API Key Management (New in v1.0.2)
+
+```javascript
+// Store API key securely in system keychain
+await ConfigManager.setApiKey("gemini", "your-api-key-here");
+
+// Retrieve API key (auto-tries keytar, then env, then config)
+const apiKey = await ConfigManager.getApiKey("gemini");
+
+// List all stored providers
+const providers = await ConfigManager.listApiKeys(); // ['gemini', 'openai']
+
+// Delete API key
+await ConfigManager.deleteApiKey("openai");
 ```
 
 ---
@@ -371,115 +492,163 @@ ConfigManager.init({
 
 ### ConfigManager
 
-```
-// Initialize configuration
-ConfigManager.init(config: DataProcessorConfig): void
+```javascript
+// Initialize in-memory configuration
+ConfigManager.init(config: DprocConfig): void
 
-// Get configuration
-ConfigManager.getLlmConfig(): LlmConfig | null
-ConfigManager.getPromptsDir(): string | undefined
+// Load from files/env/keytar (priority: project → global → keytar)
+await ConfigManager.load(): Promise<DprocConfig>
+
+// Save to global config file
+await ConfigManager.save(config: DprocConfig, format?: 'yaml'|'json'): Promise<void>
+
+// Update existing configuration
+await ConfigManager.update(partial: Partial<DprocConfig>): Promise<void>
+
+// Secure API key management (keytar)
+await ConfigManager.setApiKey(provider: string, key: string): Promise<void>
+await ConfigManager.getApiKey(provider: string): Promise<string | null>
+await ConfigManager.deleteApiKey(provider: string): Promise<boolean>
+await ConfigManager.listApiKeys(): Promise<string[]>
+
+// Configuration getters
+ConfigManager.getLlmConfig(): LlmConfig | undefined
 ConfigManager.getTemplatesDir(): string | undefined
-ConfigManager.getBundlesDir(): string | undefined
+ConfigManager.getPromptsDir(): string | undefined
+ConfigManager.getConfigDir(): string
+ConfigManager.getReportDefaults(): { outputDir?: string }
+ConfigManager.getSearchDefaults(): { limit?: number; temperature?: number }
+ConfigManager.getExportDefaults(): { formats?: string[]; includeTableOfContents?: boolean }
+
+// Validation
+ConfigManager.validate(): { valid: boolean; errors?: any }
 ```
 
-### ConnectorRegistry
+### ConnectorRegistry & Connectors
 
-```
-// Get connector by file extension
+```javascript
+// Registry methods
+ConnectorRegistry.getByFilePath(path: string): BaseConnector
 ConnectorRegistry.getByExtension(ext: string): BaseConnector
 
-// Get connector by file path
-ConnectorRegistry.getByFilePath(path: string): BaseConnector
+// Individual connector classes
+new CsvConnector().read(path: string): Promise<Record<string, any>[]>
+new JsonConnector().read(path: string): Promise<Record<string, any>[]>
+new XmlConnector().read(path: string): Promise<Record<string, any>[]>
+new ParquetConnector().read(path: string): Promise<Record<string, any>[]>
 
-// Register custom connector
-ConnectorRegistry.register(connector: BaseConnector): void
-```
+### BundleBuilder & BundleLoader
 
-### BundleBuilder
-
-```
-// Create bundle from records
+// Create bundle with metadata and statistics
 BundleBuilder.create(
-  records: Record<string, any>[],
-  metadata: Partial<BundleMetadata>
+records: Record<string, any>[],
+metadata: Partial<BundleMetadata>
 ): UniversalBundle
-```
 
-### BundleLoader
-
-```
-// Save bundle to file
-BundleLoader.save(bundle: UniversalBundle, path: string): Promise<void>
-
-// Load bundle from file
-BundleLoader.load(path: string): Promise<UniversalBundle>
-```
+// Save/load bundles
+await BundleLoader.save(bundle: UniversalBundle, path: string): Promise<void>
+await BundleLoader.load(path: string): Promise<UniversalBundle>
 
 ### SearchEngine
 
-```
 // Natural language search
-SearchEngine.query(
-  bundle: UniversalBundle,
-  query: string,
-  options?: SearchOptions
+await SearchEngine.query(
+bundle: UniversalBundle,
+query: string,
+options?: SearchOptions
 ): Promise<SearchResult>
 
-// Raw search (no LLM insights)
-SearchEngine.queryRaw(
-  bundle: UniversalBundle,
-  query: string,
-  options?: SearchOptions
-): Promise<Record<string, any>[]>
-```
+// Internal components (advanced usage)
+SearchPlanner.plan(query: string, bundle: UniversalBundle): Promise<SearchPlan>
+QueryExecutor.execute(plan: SearchPlan, bundle: UniversalBundle): any[]
+ResultConsolidator.consolidate(results: any[], query: string): Promise<SearchResult>
 
 ### ReportEngine
 
-```
-// Generate report
-ReportEngine.generate(
-  bundle: UniversalBundle,
-  specPath: string
+// Generate from YAML spec
+await ReportEngine.generate(
+bundle: UniversalBundle,
+specPath: string
 ): Promise<GeneratedReport>
 
 // Generate and save
-ReportEngine.generateAndSave(
-  bundle: UniversalBundle,
-  specPath: string,
-  outputPath: string
+await ReportEngine.generateAndSave(
+bundle: UniversalBundle,
+specPath: string,
+outputPath: string
 ): Promise<GeneratedReport>
 
-// Generate with custom variables
-ReportEngine.generateCustom(
-  specPath: string,
-  variables: Record<string, any>
+// Auto-generate (no spec required)
+await AutoReportGenerator.generate(
+bundle: UniversalBundle,
+options?: ReportGenerateOptions
 ): Promise<GeneratedReport>
-```
 
 ### Exporters
 
-```
 // HTML Export
-new HtmlExporter().export(
-  inputPath: string,
-  outputPath: string,
-  options?: HtmlExportOptions
+await new HtmlExporter().export(
+inputPath: string,
+outputPath: string,
+options?: HtmlExportOptions
 ): Promise<ExportResult>
 
 // PDF Export
-new PdfExporter().export(
-  inputPath: string,
-  outputPath: string,
-  options?: PdfExportOptions
+await new PdfExporter().export(
+inputPath: string,
+outputPath: string,
+options?: PdfExportOptions
 ): Promise<ExportResult>
 
 // MDX Export
-new MdxExporter().export(
-  inputPath: string,
-  outputPath: string,
-  options?: MdxExportOptions
+await new MdxExporter().export(
+inputPath: string,
+outputPath: string,
+options?: MdxExportOptions
 ): Promise<ExportResult>
+
+### LLM Client (Advanced)
+
+// Get singleton instance (auto-configured from ConfigManager)
+const llm = LlmClient.getInstance();
+
+// Generate text
+const result = await llm.generate(
+messages: LlmMessage[],
+options?: LlmGenerateOptions
+): Promise<LlmGenerateResult>
+
+// Stream responses
+const stream = await llm.stream(
+messages: LlmMessage[],
+options?: LlmGenerateOptions
+): AsyncIterable<LlmStreamChunk>
+
+// Load and render prompts
+const prompt = await PromptLoader.load('prompt-template.md');
+const rendered = await PromptRenderer.render('template.md', { variable: 'value' });
 ```
+
+---
+
+## CLI Companion Tool
+
+For command-line workflows, install the companion CLI:
+
+```shell
+npm install -g @aganitha/dproc-cli
+
+Interactive setup
+dproc init
+
+Workflow
+dproc ingest sales.csv # → bundle
+dproc search bundle.json "top 10" # → results
+dproc report bundle.json spec.yaml # → markdown
+dproc export report.md report.pdf pdf
+```
+
+See [@aganitha/dproc-cli](https://npm.aganitha.ai/@aganitha/dproc-cli) documentation.
 
 ---
 
@@ -488,77 +657,94 @@ new MdxExporter().export(
 Since this is a **training project**, be aware of:
 
 ### ⚠️ Performance
-- No query optimization
-- Loads entire dataset into memory
+
+- Loads entire dataset into memory (no database)
+- No query optimization or indexing
 - Streaming only partially implemented
 - Not tested with datasets > 100K records
+- LLM calls can be slow for large datasets
 
 ### ⚠️ Security
-- No input validation on LLM prompts
-- No sanitization of user queries
-- API keys stored in plain text
-- No rate limiting
+
+- Basic input validation only
+- API keys stored in keytar (secure) or environment variables
+- No sanitization of LLM prompts
+- No rate limiting on API calls
+- No audit logging
 
 ### ⚠️ Reliability
-- Limited error handling
-- No retry mechanisms (except basic)
-- No transaction support
-- No data validation
+
+- Limited error handling and recovery
+- No retry mechanisms for failed LLM calls
+- No transaction support for multi-step operations
+- Manual testing only (no automated tests)
 
 ### ⚠️ Features
-- Basic search operators only
-- Limited report customization
-- No incremental updates
-- No caching
+
+- Basic search operators only (no complex joins)
+- Limited report customization options
+- No incremental bundle updates
+- No result caching
+- PDF generation can be slow (uses Puppeteer)
 
 ### ⚠️ Testing
-- No unit tests
+
+- No unit test suite
 - No integration tests
 - No performance benchmarks
-- Manual testing only
+- No CI/CD pipeline
 
 ---
 
 ## Development Status
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| CSV/JSON Connectors | ✅ Working | Basic functionality |
-| XML/Parquet Connectors | ⚠️ Limited | Not thoroughly tested |
-| Bundle Creation | ✅ Working | Stats computation works |
-| LLM Integration | ✅ Working | Gemini tested, others untested |
-| Search | ⚠️ Partial | Basic queries work |
-| Reports | ⚠️ Partial | Simple templates only |
-| Exports | ⚠️ Partial | PDF may be slow |
+| Component              | Status     | Notes                   |
+| ---------------------- | ---------- | ----------------------- |
+| CSV/JSON Connectors    | ✅ Working | Streaming support       |
+| XML/Parquet Connectors | ⚠️ Basic   | Limited testing         |
+| Bundle Creation        | ✅ Working | Full statistics         |
+| ConfigManager + keytar | ✅ Working | Secure storage          |
+| LLM Integration        | ✅ Working | All 3 providers tested  |
+| Search Engine          | ✅ Working | NL → structured queries |
+| Report Generation      | ⚠️ Basic   | YAML specs working      |
+| HTML/PDF Export        | ⚠️ Basic   | PDF can be slow         |
+| Zod Validation         | ✅ Working | Full schema coverage    |
 
 ---
 
 ## Project Context
 
 **Purpose:** Built as a learning exercise to understand:
-- TypeScript package architecture
-- LLM SDK integration patterns
-- Data processing pipeline design
-- Streaming large files
-- Template-based report generation
 
-**Timeline:** Developed in one session (November 26-27, 2025)
+- TypeScript package architecture and module patterns
+- LLM SDK integration (Vercel AI SDK)
+- Data processing pipeline design
+- Streaming large files efficiently
+- Template-based report generation
+- Secure credential management (keytar)
+- Schema validation with Zod
+
+**Timeline:** Developed November 26-30, 2025
 
 **Author:** Built during TypeScript/LLM training at Aganitha Cognitive Solutions
 
 **Not Suitable For:**
+
 - ❌ Production data processing
 - ❌ Sensitive or confidential data
 - ❌ Mission-critical workflows
-- ❌ Large-scale deployments
+- ❌ Large-scale deployments (>100K records)
 - ❌ Customer-facing applications
+- ❌ High-availability systems
 
 **Good For:**
+
 - ✅ Learning TypeScript patterns
-- ✅ Prototyping ideas
+- ✅ Prototyping data analysis ideas
 - ✅ Educational demonstrations
 - ✅ Understanding LLM integration
-- ✅ Architecture exploration
+- ✅ Exploring data pipeline architecture
+- ✅ Training on AI-powered workflows
 
 ---
 
@@ -566,14 +752,90 @@ Since this is a **training project**, be aware of:
 
 To make this production-ready, would need:
 
-1. **Testing:** Full test suite (unit, integration, e2e)
-2. **Security:** Input validation, sanitization, secrets management
-3. **Performance:** Query optimization, caching, lazy loading
-4. **Reliability:** Error handling, retries, transactions
-5. **Documentation:** Full API docs, tutorials, examples
-6. **Features:** Advanced search, complex reports, data validation
-7. **Monitoring:** Logging, metrics, error tracking
-8. **Deployment:** Docker, CI/CD, health checks
+1. **Testing:** Comprehensive test suite (unit, integration, e2e)
+2. **Security:** Full input validation, prompt sanitization, secrets rotation
+3. **Performance:** Database backend, query optimization, result caching
+4. **Reliability:** Robust error handling, retry logic, transaction support
+5. **Documentation:** Full API docs, tutorials, video guides
+6. **Features:** Advanced search (joins, aggregations), complex reports
+7. **Monitoring:** Logging, metrics, error tracking, alerting
+8. **Deployment:** Docker images, Kubernetes configs, CI/CD pipeline
+9. **Scalability:** Horizontal scaling, load balancing, queue systems
+
+---
+
+## Package Information
+
+```json
+{
+  "name": "@aganitha/dproc",
+  "version": "1.0.2",
+  "description": "AI-powered data processing engine with multi-format connectors, LLM integration, natural language search, and intelligent reporting",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "registry": "https://npm.aganitha.ai/"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+```
+
+**Published:** https://npm.aganitha.ai/@aganitha/dproc
+
+**Key Dependencies:**
+
+- `ai@5.0.102` - Vercel AI SDK for LLM integration
+- `@ai-sdk/google@2.0.43` - Google Gemini provider
+- `@ai-sdk/openai@2.0.72` - OpenAI provider
+- `zod@4.1.13` - Schema validation
+- `keytar@7.9.0` - Secure credential storage
+- `csv-parse@6.1.0` - CSV parsing
+- `fast-xml-parser@5.3.2` - XML parsing
+- `parquetjs@0.11.2` - Parquet support
+- `nunjucks@3.2.4` - Template engine
+- `puppeteer@24.31.0` - PDF generation
+- `marked@17.0.1` - Markdown parsing
+- `yaml@2.8.1` - YAML configuration
+
+---
+
+## Development
+
+Clone repository
+
+```shell
+git clone https://github.com/mdharwad-acog/dproc.git
+cd dproc
+
+Install dependencies
+pnpm install
+
+Build TypeScript
+pnpm build
+
+Development mode (watch)
+pnpm dev
+
+Clean build artifacts
+pnpm clean
+
+Run tests (vitest)
+pnpm test
+
+Publish to Aganitha registry
+npm publish
+```
+
+**Build scripts:**
+
+- `pnpm build` - Compile TypeScript to `dist/`
+- `pnpm dev` - Watch mode with auto-rebuild
+- `pnpm clean` - Remove `dist/` directory
+- `pnpm test` - Run vitest test suite
+- `pnpm prepublishOnly` - Clean + build before publish
 
 ---
 
@@ -582,42 +844,45 @@ To make this production-ready, would need:
 Since this is a training project, contributions are welcome for learning purposes:
 
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
-4. Submit a pull request
+4. Commit your changes (`git commit -m 'Add amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
 
-**Please note:** This project is not actively maintained for production use.
-
----
-
-## License
-
-MIT License - See LICENSE file
-
-**Disclaimer:** This software is provided "as is" for educational purposes. Use at your own risk.
+**Please note:** This project is not actively maintained for production use. Contributions are for educational purposes only.
 
 ---
 
 ## Support
 
 For questions or issues:
-- 📧 Email: mdharwad@aganitha.ai
 
-**Remember:** This is a training project - please use responsibly!
+- 📧 Email: [mdharwad@aganitha.ai](mailto:mdharwad@aganitha.ai)
+- 💬 GitHub Issues: [github.com/mdharwad-acog/dproc/issues](https://github.com/mdharwad-acog/dproc/issues)
+
+**Remember:** This is a training project - please use responsibly and not for production workloads!
 
 ---
 
 ## Acknowledgments
 
-Built using:
-- [Vercel AI SDK](https://sdk.vercel.ai/) - LLM integration
-- [TypeScript](https://www.typescriptlang.org/) - Type safety
-- [Nunjucks](https://mozilla.github.io/nunjucks/) - Templating
-- [Puppeteer](https://pptr.dev/) - PDF generation
+Built using excellent open-source tools:
+
+- [Vercel AI SDK](https://sdk.vercel.ai/) - LLM integration framework
+- [TypeScript](https://www.typescriptlang.org/) - Type safety and modern JavaScript
+- [Zod](https://zod.dev/) - Schema validation
+- [Nunjucks](https://mozilla.github.io/nunjucks/) - Templating engine
+- [Puppeteer](https://pptr.dev/) - Headless Chrome for PDF generation
 - [Marked](https://marked.js.org/) - Markdown parsing
+- [keytar](https://github.com/atom/node-keytar) - Secure credential storage
+
+Special thanks to the Aganitha training program for providing the learning opportunity.
 
 ---
 
-**Version:** 1.0.1 (Training Release)  
+**Repository:** https://github.com/mdharwad-acog/dproc  
+**NPM Package:** https://npm.aganitha.ai/@aganitha/dproc  
+**Version:** 1.0.2 (Training Release)  
 **Status:** 🎓 Educational / Not Production Ready  
-**Last Updated:** November 27, 2025
+**Last Updated:** December 1, 2025
