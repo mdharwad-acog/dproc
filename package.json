@@ -25,23 +25,7 @@
     "prepublishOnly": "npm run clean && npm run build"
   },
   "keywords": [
-    "data-processing",
-    "etl",
-    "ai",
-    "llm",
-    "gemini",
-    "openai",
-    "deepseek",
-    "csv",
-    "json",
-    "xml",
-    "parquet",
-    "reports",
-    "search",
-    "natural-language",
-    "pdf-export",
-    "html-export",
-    "mdx"
+    "data-processing"
   ],
   "author": "acog-mdharwad",
   "repository": {
