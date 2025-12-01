@@ -94,6 +94,7 @@ console.log(results.insights); // AI-generated insights
 
 dproc is organized into 7 independent layers:
 
+```
 @aganitha/dproc
 ├── 1. Configuration Layer - ConfigManager, keytar, Zod validation
 ├── 2. Connectors Layer - CSV, JSON, XML, Parquet readers
@@ -102,6 +103,7 @@ dproc is organized into 7 independent layers:
 ├── 5. Reports Layer - Template-driven report generation (Nunjucks)
 ├── 6. Search Layer - Natural language search with query planning
 └── 7. Exports Layer - HTML, PDF, MDX output (Puppeteer)
+```
 
 Each layer is independent and can be used separately for modular development.
 
